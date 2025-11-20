@@ -1,0 +1,93 @@
+(prompts & responses)
+
+```markdown
+# LLM Usage
+
+The following sections document where and how I used Large Language Models (LLMs) to implement this assignment. Prompts, raw responses, and my edits are included as requested.
+
+> Note: The actual raw responses are taken from the ChatGPT conversation used during development.
+
+## 1. Architecture and design
+
+**Prompt**
+
+> “Design an end-to-end architecture for a Kubernetes-based npm registry proxy and admission webhook that share a malware JSON list. Requirements: proxy must block malicious npm packages using semver rules; webhook must scan images for node_modules and log to CSV on a PVC without blocking pod creation. Include caching/backoff strategy and suggested Kubernetes manifests.”
+
+**LLM Response (excerpt)**
+
+- Proposed separating a malware cache in the proxy.
+- Suggested using a `/malware` internal endpoint for sharing the cache with the webhook.
+- Recommended a ValidatingAdmissionWebhook with `failurePolicy: Ignore`.
+- Outlined a basic set of manifests (Deployment, Service, PVC, WebhookConfiguration).
+
+**My edits / validation**
+
+- I simplified some of the manifests and tightened security by:
+  - Using distroless images.
+  - Adding NetworkPolicies.
+- I validated the design by:
+  - Applying the manifests to a local `kind` cluster.
+  - Verifying all Pods reached `Ready` and that the webhook endpoints were reachable.
+
+## 2. Semver matching logic
+
+**Prompt**
+
+> “Show Go code to match a package version against a semver constraint like `*`, `^1.2.0`, or `>=1.0.0 <2.0.0` using Masterminds/semver, returning true if the constraint is satisfied.”
+
+**LLM Response (excerpt)**
+
+- Provided example code using `NewConstraint` and `Check`.
+- Demonstrated exact-match fallback.
+
+I integrated this into `pkg/malware/model.go` as `MalwareEntry.Matches`, and added tests for:
+
+- `*` wildcard.
+- Exact version matches.
+- Range matches.
+- Handling invalid constraints.
+
+## 3. Admission webhook skeleton
+
+**Prompt**
+
+> “Generate a minimal Go HTTP server implementing a Kubernetes ValidatingAdmissionWebhook for Pods that always allows pod creation but logs the pod name and namespace.”
+
+**LLM Response (excerpt)**
+
+- Created an `AdmissionReview` handler in Go.
+- Always set `Allowed: true`.
+- Demonstrated how to unmarshal a `Pod` from the request.
+
+I then:
+
+- Wrapped the logic inside `pkg/webhook/handler.go`.
+- Extended it to:
+  - Call the proxy’s `/malware` endpoint.
+  - Append findings to a CSV file on a PVC.
+  - Add `/healthz` for liveness/readiness probes.
+
+## 4. README and documentation
+
+**Prompt**
+
+> “Rewrite this README section to be concise and clear for an interviewer validating a Kubernetes home assignment. Keep all commands technically accurate.”
+
+The LLM improved clarity and ordering of steps. I manually verified:
+
+- All resource names existed (namespace, Deployments, Services).
+- Commands matched the actual file names in the repo.
+- The text correctly reflected the current design (e.g., fail-open proxy behavior, `failurePolicy: Ignore` for webhook).
+
+## Validation of LLM output
+
+I validated all LLM-generated or -influenced code by:
+
+1. Running `go build ./...` and `go test ./...`.
+2. Spinning up a `kind` cluster and applying the manifests.
+3. Port-forwarding the proxy and verifying:
+   - A clean package installs successfully.
+   - A mocked-malicious package is blocked with an informative error.
+4. Creating a test Pod that triggers webhook logging and confirming:
+   - The admission request always allowed the Pod.
+   - The webhook wrote a CSV row with the expected columns and values.
