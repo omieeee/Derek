@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: malware-admission-webhook
+  namespace: malware-security
+spec:
+  podSelector:
+    matchLabels:
+      app: malware-admission-webhook
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app: npm-registry-proxy
+      ports:
+        - protocol: TCP
+          port: 4873

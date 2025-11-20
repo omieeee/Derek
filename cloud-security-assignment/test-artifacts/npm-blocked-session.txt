@@ -1,0 +1,6 @@
+$ npm set registry http://localhost:4873
+$ npm install @espace-client-axafr/document-card@1.2.3
+
+npm ERR! code E403
+npm ERR! 403 Forbidden - GET http://localhost:4873/@espace-client-axafr%2fdocument-card/-/document-card-1.2.3.tgz
+npm ERR! install blocked: @espace-client-axafr/document-card@1.2.3 is on malware list

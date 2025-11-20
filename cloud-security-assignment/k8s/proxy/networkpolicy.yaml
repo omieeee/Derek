@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: npm-registry-proxy
+  namespace: malware-security
+spec:
+  podSelector:
+    matchLabels:
+      app: npm-registry-proxy
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from: []  # allow from all namespaces / cluster; tighten if desired
+      ports:
+        - protocol: TCP
+          port: 4873
+  egress:
+    - to: [] # allow all; restrict to npm registry + malware API in real setup
+      ports:
+        - protocol: TCP
+          port: 443

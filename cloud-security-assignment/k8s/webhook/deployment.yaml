@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: malware-admission-webhook
+  namespace: malware-security
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: malware-admission-webhook
+  template:
+    metadata:
+      labels:
+        app: malware-admission-webhook
+    spec:
+      serviceAccountName: malware-admission-webhook
+      containers:
+        - name: webhook
+          image: your-repo/malware-admission-webhook:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--listen=:8443"
+            - "--tls-cert=/tls/tls.crt"
+            - "--tls-key=/tls/tls.key"
+            - "--malware-url=http://npm-registry-proxy.malware-security.svc.cluster.local:8080/malware"
+            - "--csv-path=/data/findings.csv"
+          ports:
+            - name: https
+              containerPort: 8443
+          volumeMounts:
+            - name: tls
+              mountPath: /tls
+              readOnly: true
+            - name: findings
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: tls
+          secret:
+            secretName: webhook-tls
+        - name: findings
+          persistentVolumeClaim:
+            claimName: webhook-findings-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: malware-admission-webhook
+  namespace: malware-security
+spec:
+  selector:
+    app: malware-admission-webhook
+  ports:
+    - name: https
+      port: 443
+      targetPort: https

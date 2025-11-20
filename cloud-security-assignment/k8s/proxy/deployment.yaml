@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: npm-registry-proxy
+  namespace: malware-security
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: npm-registry-proxy
+  template:
+    metadata:
+      labels:
+        app: npm-registry-proxy
+    spec:
+      serviceAccountName: npm-registry-proxy
+      containers:
+        - name: proxy
+          image: your-repo/npm-registry-proxy:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--listen=:8080"
+            - "--upstream=https://registry.npmjs.org"
+            - "--malware-api-url=$(MALWARE_API_URL)"
+            - "--fail-closed=false"
+          env:
+            - name: MALWARE_API_URL
+              value: "https://example.com/malware.json" # replace with real API
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: npm-registry-proxy
+  namespace: malware-security
+spec:
+  selector:
+    app: npm-registry-proxy
+  ports:
+    - name: http
+      port: 4873
+      targetPort: http
+      protocol: TCP

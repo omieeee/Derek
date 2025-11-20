@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malicious-pod
+  namespace: default
+  annotations:
+    malware-test/has-node-modules: "true"
+spec:
+  containers:
+    - name: app
+      image: node:20-alpine
+      command: ["sleep", "3600"]

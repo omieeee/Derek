@@ -1,0 +1,5 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: npm-registry-proxy
+  namespace: malware-security

@@ -1,0 +1,23 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: malware-admission-webhook
+webhooks:
+  - name: malware-admission-webhook.malware-security.svc
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 10
+    failurePolicy: Ignore  # never block pod creation
+    clientConfig:
+      service:
+        name: malware-admission-webhook
+        namespace: malware-security
+        path: /validate
+        port: 443
+      caBundle: <BASE64_CA_BUNDLE>  # patch via script or cert-manager
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+        scope: "*"

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: malware-admission-webhook
+  namespace: malware-security
+---
+# No additional RBAC required since webhook only handles AdmissionReview payloads.
